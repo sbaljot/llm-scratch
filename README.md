@@ -37,3 +37,107 @@ Target: "cat sat on"
 ```
 
 The `Dataset` is responsible for creating these input-target pairs, while PyTorch's `DataLoader` is used to batch and efficiently provide them to the model during training.
+
+## 2. Core Model Architecture Components
+
+This is the **heart of the neural network**, where the Transformer architecture is implemented using PyTorch modules (`nn.Module`).
+
+### Embedding Layers
+
+The model uses two embedding layers:
+
+* **Token Embedding:** Maps each token ID to a dense vector representation.
+* **Positional Embedding:** Encodes the position of each token in the sequence, allowing the model to understand word order.
+
+```text
+Token IDs
+    ↓
+Token Embedding ─────┐
+                     ├──→ Combined Representation
+Position IDs         │
+    ↓                │
+Positional Embedding┘
+```
+
+### Causal Self-Attention
+
+**Causal Self-Attention** is the core mechanism that allows the Transformer to determine which previous tokens are relevant when predicting the next token.
+
+The input is projected into three matrices:
+
+* **Query (Q):** Represents what the current token is looking for.
+* **Key (K):** Represents what information each token contains.
+* **Value (V):** Contains the information that is ultimately aggregated.
+
+The attention mechanism uses these matrices to calculate attention scores and applies a **causal mask** to prevent a token from attending to future tokens.
+
+```text
+Input
+  ↓
+ ┌───────────────┐
+ │ Q      K      V│
+ └───────┬───────┘
+         ↓
+  Attention Scores
+         ↓
+    Causal Mask
+         ↓
+       Softmax
+         ↓
+   Weighted Values
+         ↓
+      Output
+```
+
+The causal mask ensures that when predicting a token, the model can only use the current and previous tokens, never future tokens.
+
+### Multi-Head Attention & Transformer Blocks
+
+Instead of using a single attention mechanism, **Multi-Head Attention** runs multiple attention heads in parallel. Each head can learn different relationships between tokens.
+
+The attention mechanism is combined with other components to form a **Transformer Block**:
+
+* **Multi-Head Self-Attention**
+* **Feed-Forward Network (FFN)**
+* **Layer Normalization**
+* **Residual Connections**
+
+Multiple Transformer blocks can then be stacked together to increase the model's representational capacity.
+
+```text
+Input
+  ↓
+Layer Normalization
+  ↓
+Multi-Head Self-Attention
+  ↓
+Residual Connection
+  ↓
+Layer Normalization
+  ↓
+Feed-Forward Network
+  ↓
+Residual Connection
+  ↓
+Output
+```
+
+### Output Linear Head
+
+After passing through the Transformer blocks, the final hidden representations are passed through a **linear layer**.
+
+This layer maps the model's hidden dimension to the size of the vocabulary, producing a **logit for every possible token**.
+
+```text
+Final Hidden States
+        ↓
+   Linear Layer
+        ↓
+Vocabulary-sized Logits
+        ↓
+      Softmax
+        ↓
+Token Probabilities
+```
+
+The token with the highest probability, or a token sampled using a chosen sampling strategy, can then be selected as the model's next token.
