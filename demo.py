@@ -18,6 +18,8 @@ from hf_data import load_hf_text
 from dataset import create_dataloader
 from embeddings import TokenAndPositionalEmbedding
 from attention import CausalSelfAttention
+from transformer_block import TransformerBlock
+import torch.nn as nn
 
 
 def get_tokenizer():
@@ -94,6 +96,12 @@ def main():
 
     # --- causal self-attention: let tokens gather context from earlier tokens ---
     attention = CausalSelfAttention(d_model=d_model, max_length=max_length)
+    attention.eval()  # disable dropout for this exploratory run -- otherwise
+    # token 0 (which has only ONE valid attention weight, since the causal
+    # mask blocks everything else) has a real chance of that single weight
+    # being dropped, zeroing its entire output. eval() makes runs reproducible
+    # while you're just checking shapes; re-enable dropout (attention.train())
+    # once you move on to actual training.
     context = attention(embedded)  # [batch_size, max_length, d_model] -> same shape out
 
     print("\nAttention output shape:", context.shape)
@@ -104,6 +112,31 @@ def main():
         "embedding above -- even though it only had itself to attend to "
         "(causal mask blocks everything after position 0), it still passed "
         "through the Q/K/V projections."
+    )
+
+    # --- stack transformer blocks: multi-head attention + FFN + residuals + norm ---
+    num_heads = 4       # d_model (64) must be divisible by this -> head_dim = 16
+    num_layers = 2       # how many blocks deep -- GPT-2 small uses 12
+
+    blocks = nn.ModuleList([
+        TransformerBlock(d_model=d_model, num_heads=num_heads, max_length=max_length)
+        for _ in range(num_layers)
+    ])
+    for block in blocks:
+        block.eval()  # disable dropout for this exploratory, reproducible run
+
+    x = embedded  # start from the embedding output, same input the single-head demo used
+    for block in blocks:
+        x = block(x)  # shape stays [batch_size, max_length, d_model] at every layer
+
+    print("\nAfter", num_layers, "transformer block(s), output shape:", x.shape)
+    print("First token's vector (first 8 of", d_model, "dims):")
+    print(x[0, 0, :8])
+    print(
+        "\nUnlike the single-head attention demo, token 0's vector here is no "
+        "longer just its own Value projection -- the residual connections mean "
+        "its original embedding is still mixed in at every block, even though "
+        "the causal mask still only lets it attend to itself."
     )
 
 
