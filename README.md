@@ -141,3 +141,174 @@ Token Probabilities
 ```
 
 The token with the highest probability, or a token sampled using a chosen sampling strategy, can then be selected as the model's next token.
+
+## 3. Pretraining & Optimization Components
+
+Once the model architecture is implemented, the next step is to train the model by optimizing its parameters.
+
+### Loss Function
+
+The model uses **Cross-Entropy Loss** to measure how accurately it predicts the actual next token in the training data.
+
+The model produces logits for every token in the vocabulary, and the loss compares these predictions against the correct target token.
+
+```text
+Input Tokens
+     ↓
+   Model
+     ↓
+Predicted Logits
+     ↓
+Cross-Entropy Loss
+     ↑
+Target Tokens
+```
+
+A lower loss indicates that the model is becoming better at predicting the next token.
+
+### Optimizer & Learning Rate Scheduler
+
+An optimizer is responsible for updating the model's parameters based on the gradients calculated during backpropagation.
+
+This project uses:
+
+* **AdamW:** Optimizer used to update the model's weights.
+* **Cosine Annealing:** Learning rate scheduler that gradually adjusts the learning rate during training.
+
+```text
+Loss
+ ↓
+Backpropagation
+ ↓
+Gradients
+ ↓
+AdamW
+ ↓
+Updated Model Weights
+```
+
+### Training Loop
+
+The training loop repeatedly processes batches of training data and updates the model's parameters.
+
+The general process is:
+
+```text
+Load Batch
+   ↓
+Forward Pass
+   ↓
+Calculate Loss
+   ↓
+loss.backward()
+   ↓
+Calculate Gradients
+   ↓
+Optimizer Step
+   ↓
+Update Weights
+   ↓
+Repeat
+```
+
+The training process continues for a predefined number of epochs or training steps until the model has sufficiently learned the patterns present in the training corpus.
+
+---
+
+## 4. Inference & Generation Components
+
+After pretraining, the model can be used to generate text through an **autoregressive generation pipeline**.
+
+### Autoregressive Generation Loop
+
+The generation process starts with an initial text prompt. The model predicts the next token, which is then appended to the existing sequence. This process is repeated until the desired number of tokens has been generated.
+
+```text
+Initial Prompt
+      ↓
+   Tokenizer
+      ↓
+    Token IDs
+      ↓
+     Model
+      ↓
+     Logits
+      ↓
+Sample Next Token
+      ↓
+Append Token
+      ↓
+    Model Again
+      ↓
+     Repeat
+```
+
+For example:
+
+```text
+Prompt:
+"The cat"
+
+        ↓
+
+"The cat sat"
+
+        ↓
+
+"The cat sat on"
+
+        ↓
+
+"The cat sat on the"
+
+        ↓
+
+"The cat sat on the mat"
+```
+
+This process is called **autoregressive generation** because each newly generated token becomes part of the input used to predict the next token.
+
+### Sampling Strategies
+
+Instead of always selecting the token with the highest probability, different sampling strategies can be used to control the quality and randomness of generated text.
+
+#### Temperature
+
+**Temperature** controls the randomness of token selection.
+
+* Lower temperature → more deterministic and predictable output.
+* Higher temperature → more random and diverse output.
+
+#### Top-k Sampling
+
+**Top-k sampling** restricts the possible next tokens to the `k` tokens with the highest probabilities.
+
+```text
+Vocabulary
+    ↓
+Select Top-k Tokens
+    ↓
+Sample from Top-k
+    ↓
+Next Token
+```
+
+#### Top-p Sampling
+
+**Top-p sampling** selects the smallest group of tokens whose cumulative probability reaches a specified threshold `p`.
+
+This dynamically changes the number of candidate tokens based on the model's probability distribution.
+
+```text
+Vocabulary
+    ↓
+Sort by Probability
+    ↓
+Calculate Cumulative Probability
+    ↓
+Keep Tokens up to p
+    ↓
+Sample Next Token
+```
+
+These sampling techniques can be combined with temperature to control the balance between **coherence, predictability, and creativity** during generation.
